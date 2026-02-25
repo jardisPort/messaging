@@ -14,33 +14,44 @@ help:
 
 <---composer----->: ## -----------------------------------------------------------------------
 install: ## Run composer install
-	$(DOCKER_COMPOSE) run --rm phpcli composer install --no-cache
+	$(DOCKER_COMPOSE) run --rm --no-deps phpcli composer install --no-cache
 .PHONY: install
 
-update: ## run composer update
-	$(DOCKER_COMPOSE) run --rm -it -e XDEBUG_MODE=off phpcli composer update
+update: ## Run composer update
+	$(DOCKER_COMPOSE) run --rm --no-deps -e XDEBUG_MODE=off phpcli composer update
+.PHONY: update
 
 autoload: ## Run composer dump-autoload
-	$(DOCKER_COMPOSE) run --rm phpcli composer dumpautoload
+	$(DOCKER_COMPOSE) run --rm --no-deps phpcli composer dumpautoload
 .PHONY: autoload
 
 <---qa tools----->: ## -----------------------------------------------------------------------
-phpstan: ## Run analyse source in src -> phpstan.neon
-	$(DOCKER_COMPOSE) run --rm phpcli vendor/bin/phpstan analyse /app/src -c phpstan.neon
+phpstan: ## Run PHPStan analysis
+	$(DOCKER_COMPOSE) run --rm --no-deps phpcli vendor/bin/phpstan analyse /app/src -c phpstan.neon
 .PHONY: phpstan
 
-phpcs: ## Run coding standards -> phpcs.cml
-	$(DOCKER_COMPOSE) run --rm phpcli vendor/bin/phpcs -q /app/src
+phpcs: ## Run coding standards
+	$(DOCKER_COMPOSE) run --rm --no-deps phpcli vendor/bin/phpcs /app/src
 .PHONY: phpcs
 
-<---docker------->: ## -----------------------------------------------------------------------
-shell: ## Run a shell inside the container
-	$(DOCKER_COMPOSE) run --rm -it phpcli sh
+<---development----->: ## -----------------------------------------------------------------------
+shell: ## Run a shell inside the phpcli container
+	$(DOCKER_COMPOSE) run --rm --no-deps -it phpcli sh
 .PHONY: shell
 
-remove: ## Stops and removes containers, images, network, volumes and caches
-	$(DOCKER_COMPOSE) down --volumes --remove-orphans --rmi "all"
-	@docker images --filter dangling=true -q | xargs -r docker rmi
+<---cleanup----->: ## -----------------------------------------------------------------------
+clean: ## Stop containers and clean up volumes
+	@echo "Cleaning up containers and volumes..."
+	@$(DOCKER_COMPOSE) down -v --remove-orphans
+	@echo "Cleanup complete."
+.PHONY: clean
+
+remove: ## Stops and removes containers, images, network and caches
+	@echo "Removing all Docker resources..."
+	@$(DOCKER_COMPOSE) down --volumes --remove-orphans --rmi "all"
+	@docker images --filter dangling=true -q 2>/dev/null | xargs -r docker rmi 2>/dev/null || true
+	@echo "Complete removal done."
+.PHONY: remove
 
 <---ssh -------->: ## -----------------------------------------------------------------------
 ssh-agent: ## Get SSH agent ready
